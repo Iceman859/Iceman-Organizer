@@ -1,11 +1,12 @@
+"""
+File Organizer Application.
+Organizes files in a directory into subfolders based on file extensions.
+"""
 import os
 import shutil
+import json
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
-import json
-
-# This Script Organizes files in the specified directory into subdirectories based on file types.
-# Features: GUI, configurable directory, dry run mode, configurable categories, ignore list.
 
 # Default categories and ignore list
 default_config = {
@@ -23,38 +24,40 @@ default_config = {
     "ignore": ['desktop.ini', 'Thumbs.db', '.DS_Store']  # Files to ignore entirely
 }
 
-configFile = 'config.json'
+CONFIG_FILE = 'config.json'
+selected_directory = None
 
 # Load or create config
-if not os.path.exists(configFile):
-    with open(configFile, 'w') as f:
+if not os.path.exists(CONFIG_FILE):
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(default_config, f, indent=4)
 
-with open(configFile, 'r') as f:
+with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
     config = json.load(f)
 
 file_extensions = config['categories']
 ignore_list = [item.lower() for item in config['ignore']]
 
 def save_config():
-    global config, file_extensions, ignore_list
+    """Save current configuration to JSON file."""
     config['categories'] = file_extensions
     config['ignore'] = ignore_list
-    with open(configFile, 'w') as f:
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=4)
 
 def open_config_window():
+    """Open a window to configure categories and extensions."""
     config_win = tk.Toplevel(root)
     config_win.title("Configure Categories")
     config_win.geometry("600x500")
     config_win.resizable(True, True)
 
     # Main Frame
-    main_frame = ttk.Frame(config_win, padding="10")
-    main_frame.pack(fill=tk.BOTH, expand=True)
+    config_panel = ttk.Frame(config_win, padding="10")
+    config_panel.pack(fill=tk.BOTH, expand=True)
 
     # Categories Section
-    cat_frame = ttk.LabelFrame(main_frame, text="Categories", padding="5")
+    cat_frame = ttk.LabelFrame(config_panel, text="Categories", padding="5")
     cat_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
     categories_listbox = tk.Listbox(cat_frame, height=15)
     categories_listbox.pack(fill=tk.BOTH, expand=True)
@@ -62,7 +65,7 @@ def open_config_window():
         categories_listbox.insert(tk.END, cat)
 
     # Extensions Section
-    ext_frame = ttk.LabelFrame(main_frame, text="Extensions for Selected Category", padding="5")
+    ext_frame = ttk.LabelFrame(config_panel, text="Extensions for Selected Category", padding="5")
     ext_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
     extensions_frame = ttk.Frame(ext_frame)
     extensions_frame.pack(fill=tk.BOTH, expand=True)
@@ -140,6 +143,7 @@ def open_config_window():
     ttk.Button(config_win, text="Close", command=config_win.destroy).pack(pady=5)
 
 def select_directory():
+    """Open dialog to select the target directory."""
     dir_path = filedialog.askdirectory(title="Select Directory to Organize")
     if dir_path:
         directory_label.config(text=f"Selected Directory: {dir_path}")
@@ -148,6 +152,7 @@ def select_directory():
         status_var.set(f"Selected directory: {os.path.basename(dir_path)}")
 
 def organize_files():
+    """Main logic to organize files into subfolders."""
     if not selected_directory:
         messagebox.showerror("Error", "Please select a directory first.")
         return
@@ -181,7 +186,7 @@ def organize_files():
                     else:
                         try:
                             shutil.move(file_path, target_path)
-                        except Exception as e:
+                        except OSError as e:
                             output_text.insert(tk.END, f"Error moving {filename}: {str(e)}\n")
                             continue
                     organized_counts[folder] += 1
