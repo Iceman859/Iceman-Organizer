@@ -39,7 +39,7 @@ A Python GUI application to organize files in a directory by their types into ca
 
 ## Configuration
 
-- Categories and extensions are stored in `categories.json`.
+- Categories and extensions are stored in `config.json`.
 - Edit this file or use the GUI to customize.
 
 ## Contributing

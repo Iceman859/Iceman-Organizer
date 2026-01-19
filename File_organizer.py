@@ -23,7 +23,7 @@ default_config = {
     "ignore": ['desktop.ini', 'Thumbs.db', '.DS_Store']  # Files to ignore entirely
 }
 
-config_file = 'categories.json'
+config_file = 'config.json'
 
 # Load or create config
 if not os.path.exists(config_file):
