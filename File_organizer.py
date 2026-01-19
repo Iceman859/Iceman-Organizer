@@ -5,6 +5,7 @@ Organizes files in a directory into subfolders based on file extensions.
 import os
 import shutil
 import json
+import logging
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog, ttk
 
@@ -26,6 +27,10 @@ default_config = {
 
 CONFIG_FILE = 'config.json'
 selected_directory = None
+undo_stack = []
+
+# Setup logging
+logging.basicConfig(filename='organizer.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Load or create config
 if not os.path.exists(CONFIG_FILE):
@@ -151,6 +156,32 @@ def select_directory():
         selected_directory = dir_path
         status_var.set(f"Selected directory: {os.path.basename(dir_path)}")
 
+def undo_changes():
+    """Revert the last batch of organized files."""
+    if not undo_stack:
+        return
+
+    last_batch = undo_stack.pop()
+    undo_count = 0
+    output_text.insert(tk.END, "\n--- Undoing Last Operation ---\n")
+
+    for src, dest in last_batch:
+        try:
+            if os.path.exists(dest):
+                shutil.move(dest, src)
+                undo_count += 1
+                logging.info(f"Undid move: {dest} -> {src}")
+            else:
+                logging.warning(f"Undo failed: File not found at {dest}")
+        except OSError as e:
+            logging.error(f"Undo error {dest} -> {src}: {e}")
+            output_text.insert(tk.END, f"Error undoing {os.path.basename(dest)}: {e}\n")
+
+    output_text.insert(tk.END, f"Successfully reverted {undo_count} files.\n")
+    status_var.set(f"Undid {undo_count} moves.")
+    if not undo_stack:
+        undo_btn.config(state=tk.DISABLED)
+
 def organize_files():
     """Main logic to organize files into subfolders."""
     if not selected_directory:
@@ -161,6 +192,7 @@ def organize_files():
     output_text.delete(1.0, tk.END)  # Clear previous output
     status_var.set("Organizing files...")
 
+    current_batch = []
     # Create Subdirectories Based On File Types
     for folder in file_extensions.keys():
         folder_path = os.path.join(selected_directory, folder)
@@ -186,7 +218,10 @@ def organize_files():
                     else:
                         try:
                             shutil.move(file_path, target_path)
+                            current_batch.append((file_path, target_path))
+                            logging.info(f"Moved {filename} to {folder}")
                         except OSError as e:
+                            logging.error(f"Error moving {filename}: {e}")
                             output_text.insert(tk.END, f"Error moving {filename}: {str(e)}\n")
                             continue
                     organized_counts[folder] += 1
@@ -207,6 +242,10 @@ def organize_files():
         for folder, count in organized_counts.items():
             if count > 0:
                 output_text.insert(tk.END, f'{folder}: {count} files\n')
+
+    if current_batch:
+        undo_stack.append(current_batch)
+        undo_btn.config(state=tk.NORMAL)
 
     status_var.set("Organization complete.")
 
@@ -257,8 +296,12 @@ dry_run_var = tk.BooleanVar()
 ttk.Checkbutton(options_frame, text="Dry Run (Preview Only)", variable=dry_run_var).pack(side=tk.LEFT, padx=5)
 ttk.Button(options_frame, text="Configure Categories", command=open_config_window).pack(side=tk.RIGHT, padx=5)
 
-# Organize Button
-ttk.Button(main_frame, text="Organize Files", command=organize_files).pack(pady=10)
+# Action Buttons
+action_frame = ttk.Frame(main_frame)
+action_frame.pack(pady=10)
+ttk.Button(action_frame, text="Organize Files", command=organize_files).pack(side=tk.LEFT, padx=5)
+undo_btn = ttk.Button(action_frame, text="Undo Last", command=undo_changes, state=tk.DISABLED)
+undo_btn.pack(side=tk.LEFT, padx=5)
 
 # Output Area with Scrollbar
 output_frame = ttk.LabelFrame(main_frame, text="Output", padding="5")
