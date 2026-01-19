@@ -23,14 +23,14 @@ default_config = {
     "ignore": ['desktop.ini', 'Thumbs.db', '.DS_Store']  # Files to ignore entirely
 }
 
-config_file = 'config.json'
+configFile = 'config.json'
 
 # Load or create config
-if not os.path.exists(config_file):
-    with open(config_file, 'w') as f:
+if not os.path.exists(configFile):
+    with open(configFile, 'w') as f:
         json.dump(default_config, f, indent=4)
 
-with open(config_file, 'r') as f:
+with open(configFile, 'r') as f:
     config = json.load(f)
 
 file_extensions = config['categories']
@@ -40,7 +40,7 @@ def save_config():
     global config, file_extensions, ignore_list
     config['categories'] = file_extensions
     config['ignore'] = ignore_list
-    with open(config_file, 'w') as f:
+    with open(configFile, 'w') as f:
         json.dump(config, f, indent=4)
 
 def open_config_window():
